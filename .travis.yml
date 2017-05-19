@@ -1,6 +1,10 @@
+dist: trusty
+sudo: false
+group: beta
+services:
+- docker
 language: go
 go:
-- 1.7.5
 - 1.8
 before_install:
 - curl -Ls https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip > ngrok.zip
@@ -8,7 +12,29 @@ before_install:
 - rm ngrok.zip
 - export PATH=$(pwd):$PATH
 - export GO15VENDOREXPERIMENT=1
+
+- if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then BASE_NAME=${TRAVIS_BRANCH}; else BASE_NAME=pr${TRAVIS_PULL_REQUEST}; fi
+- NAME=`echo ${BASE_NAME} | tr -cd '[\-._[:alnum:]]'`
+- TS=`date +%Y%m%dT%H%M%S`
+- VERSION_TAG=${NAME}-${TS}-${TRAVIS_COMMIT}
+- TAGS="${NAME} ${VERSION_TAG}"
+- if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ "${TRAVIS_BRANCH}" = "master" ]; then TAGS="${TAGS} latest"; fi
+
+- pip install --user awscli | cat
+- eval `$HOME/.local/bin/aws ecr get-login --region eu-west-1`
 install:
 - make depend
 script:
-- make all
+- make image "DOCKER_IMAGE=${DOCKER_NAME}" "BUILD_TAG=${BUILD_TAG}"
+deploy:
+  provider: script
+  script: "${SHELL} ./travis-deploy.sh ${DOCKER_NAME}:${BUILD_TAG} ${TAGS}"
+  on:
+    all_branches: true
+env:
+  global:
+  - DOCKER_NAME=499577160181.dkr.ecr.eu-west-1.amazonaws.com/jetstack/kube-lego
+  - BUILD_TAG=build
+  - secure: "iOTzTnakPci7lbcN3I4QYhhSd4M3UvH0lyYGwsgcBhNkbN6ltGDFWrTyP0VXakk8swdtmFit95c3TpNqKJ9+v6xVJemzEBSu73oA7wV/bkcEYd32b9nUmfwEvFwTnl/SqfPviVJmMVXJrTnOwdSLJNruGiTmGI5VWGXxevc4Qvtvv6QMzcCtq5xvlVak6Id8XPU0EV8TtFca0CVIbCoWNKxbtEzA94Uzde3HrWoFsCWjuKTNvQ5ohRVBn5JTZaXBLBsT3RbRyfyO4tZv0KBRvsQQQiffKQSHEUv3vu764Ru/gyzcbkTRIyKeabkJmmnNVVFrf/wnsKckhxHJdrQLnC0mSGEjDEKY6TP27Dc1nLVTh007vP4gz/emo1ihjlWZL95mGz3ltfJcvvT+fVeBpzoDqlYWhygsqRb2WCFvaLfI3m/hgvbybzXP2Dk1PLykTSoTGJe1Cep0XiaAzg9EDLOhCZFxvVUasvtG9Maen5qhyp+S1RPd2pZg9JEhLYRXTBTt7XasglpJ5DYnJ1CvKUQWMcdUa1vOANf+9mO0OBUKmCF+jJMLdRH6cIEW7P49XPlanyHbm844PRlEg0P6WD49STl0zfIQuRji0cgCg0OJp7bIQLxOR7Y/IOJiCGh48Z1+nn5jghemQS4LGjqkA9vQWrQGaEgNZMIToVuWsbA="
+  - secure: "YojQru88l4NWNbhbjS69Kwwv/OKa2yaq73GWzfssyxpDoZ7O0EG2jRwxfHD5bvfhGwVsFtH3OhWIyK7wCplSSIhqgVcaQznqKSuR5Jxi/voB7vmgDS6BctYow9K6Fgwb13rn64NgYPgAgwbWt3DQGJwU1KWAd5ryuZSSClJlYVJbDc81jfjHg/xHRmRSgEnpyGe0ptJJKY//FKEeDMdQ0ETChhJWvQ5y/p7r/+IrGrGYEWzZOufUhbNmyINl7am9iTbJbbJ1wd04BE/Ts1ibr5atDQvfbFzsVsmVeDy/wx92sHpUCCI5rApujHCzWMCz2VeTUqtm9PK6DLm7+X2tTnxya7Xltdx4Q822EhlvnL1XNEnIr0A1Ep3E11JCzr8aUcxHmTHosYtCpLi4/fImUgiIMK0VkD36tYDaJESm8FFGz6dRSp669KJzgOIaIO1zVECm6EQTLpDPimMLmQ8c3apfnFZaXbhSasB1Y194Y+fA3Wjm9R3NIrTdxixgbbL4tJItNzrFovSzk5xLCUWq9+l+aU2MT2HdxvhSnlP/O6ZJl7rHEmbWAopb3RJfhDxAGjjQ884nCDcQWUG6AN/l5w8JxzWM6sBdXxQxgbEBgQMOLmg2wRL2xp7TisEUBT4Wd7q6QiCHUuTnhCu66OGZMXvMXXlfNXGywCvPP5AQ4qc="
+  - secure: "gPzqYxjDvZxtoU2XUKeFqzYBTPWcn3AP/rRGwi2yzZwQZTcweqErC1FZ8wugQ7ORnYjfBcTCrwEPQRyKObsHqAx/5GC0tUHwxmVj9wDYO/+mtG2ZrpnYuisU1gIdEqUIvZVZpRLvyy63fXqe/1O1kHZOdqgrpvS9c54uLJDQLLpWsyZAVfHJM7YfQ4ShsY0LPyLXS5lGrSTOusUvi/eJJeWVdaA4j5poGX4eS7uQ34gbw/bXN05cK804Ytpa+OvFf3p5QXoRd8rlRx6D1pFh8lkf3xkQkvfjg7V+E9UM+gsUs7CwA5LqYyYU+P1DD1EFs4X0ttuf0tg99I3jG8wpMrozjl731haKcZxn4VewYH04b0wKg7hqd0uf/sdQF1dWWYwT3GgMA2i5/ZzbBFXeNNRhROID/vZQB6rJgefxM6S7yPtwL11mKmScxn6wRmodTTz/6rXlZ3FCXv6A4KlU4b71fQNpEJei/4HanWhhtzXCbsordjOpwAmLOKPxH9LgxEMMtJ+Gy7cSw6XbuZ6IDpTQgwZ3FLX3LT0wwDKjqSH6q/KOZE9vrPG/BjNNLCKl2pl3VLfgHYrdxOqc2Tfl14kRDghL4sq/0wif0pODwURw9W0JCKdwLyWEohP5EAduAZMJM4WIKQOAVnRJEwOlM5dgABe+6HGk0cLw5IA9QV8="
