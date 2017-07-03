@@ -2,8 +2,8 @@
 
 *kube-lego* automatically requests certificates for Kubernetes Ingress resources from Let's Encrypt
 
-[![Build Status](https://travis-ci.org/jetstack/kube-lego.svg?branch=master)](https://travis-ci.org/jetstack/kube-lego)
-[![](https://images.microbadger.com/badges/version/jetstack/kube-lego.svg)](http://microbadger.com/#/images/jetstack/kube-lego "Get your own version badge on microbadger.com")
+[![Build Status](https://travis-ci.org/whatsahoy/kube-lego.svg?branch=master)](https://travis-ci.org/whatsahoy/kube-lego)
+[![](https://images.microbadger.com/badges/version/whatsahoy/kube-lego.svg)](http://microbadger.com/#/images/whatsahoy/kube-lego "Get your own version badge on microbadger.com")
 
 ## Screencast
 
@@ -155,4 +155,4 @@ You can inspect the trace sample running
 ## Authors
 
 * Christian Simon for [Jetstack Ltd](http://www.jetstack.io)
-* [PR contributors](https://github.com/jetstack/kube-lego/graphs/contributors)
+* [PR contributors](https://github.com/whatsahoy/kube-lego/graphs/contributors)
