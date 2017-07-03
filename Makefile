@@ -1,4 +1,4 @@
-ACCOUNT=jetstack
+ACCOUNT=whatsahoy
 APP_NAME=kube-lego
 
 PACKAGE_NAME=github.com/${ACCOUNT}/${APP_NAME}
