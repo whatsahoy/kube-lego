@@ -12,5 +12,4 @@ install:
 - make depend
 script:
 - make all
-- docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
 - make push
