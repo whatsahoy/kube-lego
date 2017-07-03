@@ -8,7 +8,7 @@ before_install:
 - rm ngrok.zip
 - export PATH=$(pwd):$PATH
 - export GO15VENDOREXPERIMENT=1
-- docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD" 
+- docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
 install:
 - make depend
 script:
