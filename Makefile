@@ -90,7 +90,6 @@ image: docker_all version
 	
 push: image
 	set -e; \
-	docker login -u $${DOCKER_USERNAME} -p $${DOCKER_PASSWORD}; \
 	for tag in $(IMAGE_TAGS); do \
 		docker tag  $(DOCKER_IMAGE):$(BUILD_TAG) $(DOCKER_IMAGE):$${tag} ; \
 		docker push $(DOCKER_IMAGE):$${tag}; \
