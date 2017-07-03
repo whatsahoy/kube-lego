@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	"github.com/jetstack/kube-lego/pkg/kubelego"
+	"github.com/whatsahoy/kube-lego/pkg/kubelego"
 )
 
 var AppVersion = "unknown"
