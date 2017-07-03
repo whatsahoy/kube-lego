@@ -69,8 +69,8 @@ func getTlsExample() []kubelego.Tls {
 }
 
 func TestKubeLego_TlsIgnoreDuplicatedSecrets(t *testing.T) {
-	k := KubeLego{}
+	k := New("test")
 	input := getTlsExample()
 	output := k.TlsIgnoreDuplicatedSecrets(input)
-	assert.EqualValues(t, 2, len(output))
+	assert.EqualValues(t, 3, len(output))
 }

@@ -2,7 +2,10 @@ ACCOUNT=jetstack
 APP_NAME=kube-lego
 
 PACKAGE_NAME=github.com/${ACCOUNT}/${APP_NAME}
-GO_VERSION=1.7.3
+GO_VERSION=1.8
+
+GOOS := linux
+GOARCH := amd64
 
 DOCKER_IMAGE=${ACCOUNT}/${APP_NAME}
 
@@ -11,9 +14,14 @@ TEST_DIR=_test
 
 CONTAINER_DIR=/go/src/${PACKAGE_NAME}
 
+BUILD_TAG := build
+IMAGE_TAGS := canary
+
 PACKAGES=$(shell find . -name "*_test.go" | xargs -n1 dirname | grep -v 'vendor/' | sort -u | xargs -n1 printf "%s.test_pkg ")
 
 .PHONY: version
+
+all: test build
 
 codegen:
 	which mockgen
@@ -25,10 +33,11 @@ depend:
 	mkdir $(TEST_DIR)/
 	mkdir $(BUILD_DIR)/
 
-version: 
+version:
 	$(eval GIT_STATE := $(shell if test -z "`git status --porcelain 2> /dev/null`"; then echo "clean"; else echo "dirty"; fi))
 	$(eval GIT_COMMIT := $(shell git rev-parse HEAD))
-	$(eval APP_VERSION := $(shell cat VERSION))
+	$(eval APP_VERSION ?= $(shell cat VERSION))
+	echo $(APP_VERSION)
 
 
 test_prepare: depend
@@ -49,12 +58,10 @@ test: test_prepare $(PACKAGES)
 	gocover-cobertura < $(TEST_DIR)/coverage$(PKG_CLEAN).txt > $(TEST_DIR)/coverage$(PKG_CLEAN).xml
 
 build: depend version
-	CGO_ENABLED=0 GOOS=linux go build \
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
 		-a -tags netgo \
-		-o ${BUILD_DIR}/${APP_NAME} \
+		-o ${BUILD_DIR}/${APP_NAME}-$(GOOS)-$(GOARCH) \
 		-ldflags "-X main.AppGitState=${GIT_STATE} -X main.AppGitCommit=${GIT_COMMIT} -X main.AppVersion=${APP_VERSION}"
-
-all: test build
 
 docker: docker_all
 
@@ -79,10 +86,14 @@ docker_%:
 	docker rm $(CONTAINER_ID)
 
 image: docker_all version
-	docker build --build-arg VCS_REF=$(GIT_COMMIT) -t $(ACCOUNT)/$(APP_NAME):latest .
+	docker build --build-arg VCS_REF=$(GIT_COMMIT) -t $(DOCKER_IMAGE):$(BUILD_TAG) .
 	
 push: image
-	docker push $(ACCOUNT)/$(APP_NAME):latest
+	set -e; \
+	for tag in $(IMAGE_TAGS); do \
+		docker tag  $(DOCKER_IMAGE):$(BUILD_TAG) $(DOCKER_IMAGE):$${tag} ; \
+		docker push $(DOCKER_IMAGE):$${tag}; \
+	done
 
 release:
 ifndef VERSION

@@ -27,15 +27,7 @@ import (
 
 var _ kubelego.KubeLego = &KubeLego{}
 
-func New(version string) *KubeLego {
-	return &KubeLego{
-		version:   version,
-		stopCh:    make(chan struct{}),
-		waitGroup: sync.WaitGroup{},
-	}
-}
-
-func (kl *KubeLego) Log() *log.Entry {
+func makeLog() *log.Entry {
 	loglevel := strings.ToLower(os.Getenv("LEGO_LOG_LEVEL"))
 	if len(loglevel) == 0 {
 		log.SetLevel(log.InfoLevel)
@@ -51,6 +43,19 @@ func (kl *KubeLego) Log() *log.Entry {
 		log.SetLevel(log.InfoLevel)
 	}
 	return log.WithField("context", "kubelego")
+}
+
+func New(version string) *KubeLego {
+	return &KubeLego{
+		version:   version,
+		log:       makeLog(),
+		stopCh:    make(chan struct{}),
+		waitGroup: sync.WaitGroup{},
+	}
+}
+
+func (kl *KubeLego) Log() *log.Entry {
+	return kl.log
 }
 
 func (kl *KubeLego) Stop() {
@@ -156,6 +161,10 @@ func (kl *KubeLego) LegoNamespace() string {
 	return kl.legoNamespace
 }
 
+func (kl *KubeLego) LegoWatchNamespace() string {
+	return kl.legoWatchNamespace
+}
+
 func (kl *KubeLego) LegoPodIP() net.IP {
 	return kl.legoPodIP
 }
@@ -214,7 +223,7 @@ func (kl *KubeLego) paramsLego() error {
 
 	kl.legoEmail = os.Getenv("LEGO_EMAIL")
 	if len(kl.legoEmail) == 0 {
-		return errors.New("Please provide an email address for cert recovery in LEGO_EMAIL")
+		return errors.New("Please provide an email address for certificate expiration notifications in LEGO_EMAIL (https://letsencrypt.org/docs/expiration-emails/)")
 	}
 
 	kl.legoPodIP = net.ParseIP(os.Getenv("LEGO_POD_IP"))
@@ -262,7 +271,7 @@ func (kl *KubeLego) paramsLego() error {
 		var err error = nil
 		kl.legoDefaultIngressClass, err = ingress.IsSupportedIngressClass(kl.legoSupportedIngressClass, legoDefaultIngressClass)
 		if err != nil {
-			return fmt.Errorf("Unsupported default ingress class: '%s'", legoDefaultIngressClass)
+			return fmt.Errorf("Unsupported default ingress class: '%s'. You can set the ingress class with 'LEGO_DEFAULT_INGRESS_CLASS'", legoDefaultIngressClass)
 		}
 	}
 	kl.legoIngressNameNginx = os.Getenv("LEGO_INGRESS_NAME_NGINX")
@@ -321,9 +330,15 @@ func (kl *KubeLego) paramsLego() error {
 	}
 
 	annotationEnabled := os.Getenv("LEGO_KUBE_ANNOTATION")
-	if len(annotationEnabled) == 0 {
+	if len(annotationEnabled) != 0 {
 		kubelego.AnnotationEnabled = annotationEnabled
 	}
 
+	watchNamespace := os.Getenv("LEGO_WATCH_NAMESPACE")
+	if len(watchNamespace) == 0 {
+		kl.legoWatchNamespace = k8sApi.NamespaceAll
+	} else {
+		kl.legoWatchNamespace = watchNamespace
+	}
 	return nil
 }

@@ -10,44 +10,42 @@ import (
 
 func (kl *KubeLego) TlsIgnoreDuplicatedSecrets(tlsSlice []kubelego.Tls) []kubelego.Tls {
 
-	tlsBySecert := map[string][]kubelego.Tls{}
+	tlsBySecret := map[string][]kubelego.Tls{}
 
 	for _, elm := range tlsSlice {
 		key := fmt.Sprintf(
 			"%s/%s",
-			elm.SecretMetadata().Name,
 			elm.SecretMetadata().Namespace,
+			elm.SecretMetadata().Name,
 		)
-		tlsBySecert[key] = append(
-			tlsBySecert[key],
+		tlsBySecret[key] = append(
+			tlsBySecret[key],
 			elm,
 		)
 	}
 
 	output := []kubelego.Tls{}
-	for key, slice := range tlsBySecert {
-		if len(slice) == 1 {
-			output = append(output, slice...)
-			continue
-		}
-
-		texts := []string{}
-		for _, elem := range slice {
-			texts = append(
-				texts,
-				fmt.Sprintf(
-					"ingress %s/%s (hosts: %s)",
-					elem.IngressMetadata().Namespace,
-					elem.IngressMetadata().Name,
-					strings.Join(elem.Hosts(), ", "),
-				),
+	for key, slice := range tlsBySecret {
+		output = append(output, slice[0])
+		if len(slice) > 1 {
+			texts := []string{}
+			for _, elem := range slice[1:] {
+				texts = append(
+					texts,
+					fmt.Sprintf(
+						"ingress %s/%s (hosts: %s)",
+						elem.IngressMetadata().Namespace,
+						elem.IngressMetadata().Name,
+						strings.Join(elem.Hosts(), ", "),
+					),
+				)
+			}
+			kl.Log().Warnf(
+				"the secret %s is used multiple times. These linked TLS ingress elements where ignored: %s",
+				key,
+				strings.Join(texts, ", "),
 			)
 		}
-		kl.Log().Warnf(
-			"the secret %s is used multiple times. These linked TLS ingress elements where ignored: %s",
-			key,
-			strings.Join(texts, ", "),
-		)
 	}
 
 	return output

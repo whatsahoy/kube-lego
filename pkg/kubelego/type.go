@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/jetstack/kube-lego/pkg/ingress"
 	"github.com/jetstack/kube-lego/pkg/kubelego_const"
 
@@ -28,9 +29,11 @@ type KubeLego struct {
 	legoMinimumValidity       time.Duration
 	legoDefaultIngressClass   string
 	legoKubeApiURL            string
+	legoWatchNamespace        string
 	kubeClient                *kubernetes.Clientset
 	legoIngressSlice          []*ingress.Ingress
 	legoIngressProvider       map[string]kubelego.IngressProvider
+	log                       *log.Entry
 	version                   string
 	acmeClient                kubelego.Acme
 
