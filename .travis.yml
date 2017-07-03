@@ -2,6 +2,9 @@ language: go
 go:
 - 1.7.5
 - 1.8
+sudo: required
+services:
+  - docker
 before_install:
 - curl -Ls https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip > ngrok.zip
 - unzip ngrok.zip
@@ -12,4 +15,5 @@ install:
 - make depend
 script:
 - make all
+- docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
 - make push
